@@ -1,0 +1,185 @@
+---
+title: "Latihan Uji Hipotesis Vektor Rataan Nilai Tengah Dua Populasi"
+author: "Muhammad Bagas Ramadhan G1401231109"
+date: "2025-09-30"
+output:
+  html_document:
+    theme: journal
+    toc: true
+    toc_float: true
+---
+
+# Analisis 1: Uji Vektor Nilai Tengah - Sampel Berpasangan
+## 1. MEMBANGKITKAN DATA (SAMPEL BERPASANGAN)
+
+```{r}
+library(MASS)
+library(MVTests, lib.loc = "~/R/libs")
+
+# Menggunakan angka unik dari NIM Anda agar hasilnya konsisten
+set.seed(109) 
+n <- 20 # Jumlah mahasiswa
+
+# Rata-rata dan sebaran nilai Pre-test
+mu_pre <- c(65, 62)
+sigma_pre <- matrix(c(100, 45, 45, 80), nrow=2)
+pre_test <- data.frame(mvrnorm(n, mu=mu_pre, Sigma=sigma_pre))
+names(pre_test) <- c("Kalkulus_Pre", "Fisika_Pre")
+
+# Mensimulasikan efek peningkatan nilai setelah workshop
+peningkatan <- c(10, 8) # Rata-rata peningkatan untuk Kalkulus dan Fisika
+# Membuat data Post-test dengan menambahkan efek peningkatan dan sedikit noise
+post_test <- pre_test + matrix(rep(peningkatan, each=n), nrow=n) + rnorm(n*2, mean=0, sd=4)
+names(post_test) <- c("Kalkulus_Post", "Fisika_Post")
+```
+
+## 2. ANALISIS DATA
+
+```{r}
+# Menghitung selisih (d = Post-test - Pre-test)
+d_kalkulus <- post_test$Kalkulus_Post - pre_test$Kalkulus_Pre
+d_fisika <- post_test$Fisika_Post - pre_test$Fisika_Pre
+X <- data.frame(d_kalkulus, d_fisika)
+
+# Menghitung vektor rata-rata dan matriks kovarians dari selisih
+xbar <- apply(X, 2, mean)
+cov_m <- cov(X)
+
+cat("Vektor Rata-rata Selisih (xbar):\n")
+xbar
+cat("\nMatriks Kovarians Selisih (cov_m):\n")
+cov_m
+```
+
+## 3. UJI T2 HOTELLING SATU SAMPEL
+
+```{r}
+# Hipotesis Nol (H0): Rata-rata selisih adalah 0 (tidak ada efek workshop)
+mean0 <- c(0, 0)
+result_paired <- OneSampleHT2(X, mu0 = mean0, alpha = 0.05)
+
+cat("\n--- Hasil Uji T2 Hotelling (Sampel Berpasangan) ---\n")
+summary(result_paired)
+```
+
+## 4. SELANG KEPERCAYAAN BONFERRONI
+
+```{r}
+p <- length(xbar)
+# Selang kepercayaan untuk selisih nilai Kalkulus
+ci_kalkulus <- c(
+  xbar[1] - qt(0.05/(2*p), df=n-1, lower.tail=FALSE) * sqrt(cov_m[1,1]/n),
+  xbar[1] + qt(0.05/(2*p), df=n-1, lower.tail=FALSE) * sqrt(cov_m[1,1]/n)
+)
+# Selang kepercayaan untuk selisih nilai Fisika
+ci_fisika <- c(
+  xbar[2] - qt(0.05/(2*p), df=n-1, lower.tail=FALSE) * sqrt(cov_m[2,2]/n),
+  xbar[2] + qt(0.05/(2*p), df=n-1, lower.tail=FALSE) * sqrt(cov_m[2,2]/n)
+)
+
+cat("\n--- Selang Kepercayaan Bonferroni 95% untuk Rata-rata Selisih ---\n")
+cat("Selisih Nilai Kalkulus:", ci_kalkulus, "\n")
+cat("Selisih Nilai Fisika:", ci_fisika, "\n")
+```
+
+## Interpretasi
+
+Uji T2 Hotelling: Nilai p-value adalah 1.85e-10, yang sangat kecil (jauh di bawah 0.05). Ini berarti kita menolak Hipotesis Nol.
+
+Kesimpulan: Secara statistik, terdapat perbedaan yang sangat signifikan antara nilai sebelum (Pre-test) dan sesudah (Post-test) mengikuti workshop. Artinya, workshop tersebut efektif dalam meningkatkan nilai Kalkulus dan Fisika secara bersamaan.
+
+Selang Kepercayaan Bonferroni: Kedua selang kepercayaan (untuk Kalkulus dan Fisika) tidak memuat angka 0. Ini mengkonfirmasi bahwa peningkatan nilai pada kedua mata kuliah tersebut signifikan secara individu. Rata-rata peningkatan nilai Kalkulus berada di antara 7.75 dan 13.77 poin, sedangkan untuk Fisika berada di antara 5.58 dan 10.86 poin.
+
+# Analisis 2: Uji Vektor Nilai Tengah - Sampel Saling Bebas (Ragam Sama)
+## 1. MEMBANGKITKAN DATA (SAMPEL BEBAS, RAGAM SAMA)
+
+```{r}
+library(MASS)
+library(Hotelling, lib.loc = "~/R/libs")
+
+set.seed(109)
+n_A <- 25 # Jumlah mahasiswa kelompok A
+n_B <- 25 # Jumlah mahasiswa kelompok B
+
+# Rata-rata nilai kelompok A (Belajar Mandiri)
+mu_A <- c(78, 75)
+# Rata-rata nilai kelompok B (Belajar Kelompok) - sedikit lebih rendah
+mu_B <- c(72, 70) 
+
+# Matriks kovarians diasumsikan SAMA untuk kedua kelompok
+sigma <- matrix(c(150, 60, 60, 130), nrow=2)
+
+# Bangkitkan data untuk kedua kelompok
+kelompok_A <- data.frame(mvrnorm(n_A, mu=mu_A, Sigma=sigma))
+names(kelompok_A) <- c("Kalkulus", "Fisika")
+kelompok_B <- data.frame(mvrnorm(n_B, mu=mu_B, Sigma=sigma))
+names(kelompok_B) <- c("Kalkulus", "Fisika")
+```
+
+## 2. ANALISIS DATA
+
+```{r}
+# Menghitung vektor rata-rata & matriks kovarians untuk tiap kelompok
+xbar1 <- apply(kelompok_A, 2, mean)
+xbar2 <- apply(kelompok_B, 2, mean)
+cov_m1 <- cov(kelompok_A)
+cov_m2 <- cov(kelompok_B)
+
+# Menghitung Matriks Kovarians Gabungan (Pooled Covariance Matrix)
+s_gab <- ((n_A - 1) * cov_m1 + (n_B - 1) * cov_m2) / (n_A + n_B - 2)
+cat("Matriks Kovarians Gabungan (s_gab):\n")
+s_gab
+```
+
+## 3. UJI T2 HOTELLING DUA SAMPEL (RAGAM SAMA)
+
+```{r}
+# H0: Tidak ada perbedaan rata-rata nilai antara kelompok A dan B
+result_homogen <- hotelling.test(kelompok_A, kelompok_B, var.equal = TRUE)
+cat("\n--- Hasil Uji T2 Hotelling (Sampel Bebas, Ragam Sama) ---\n")
+result_homogen
+```
+
+## Interpretasi
+
+Uji T2 Hotelling: Nilai p-value adalah 0.3462, yang lebih besar dari 0.05. Ini berarti kita gagal menolak Hipotesis Nol.
+
+Kesimpulan: Tidak terdapat cukup bukti statistik untuk menyatakan adanya perbedaan yang signifikan antara rata-rata nilai mahasiswa yang menggunakan metode "Belajar Mandiri Terstruktur" dan metode "Belajar Kelompok dengan Proyek".
+
+# Analisis 3: Uji Vektor Nilai Tengah - Sampel Saling Bebas (Ragam Berbeda)
+## 1. MEMBANGKITKAN DATA (SAMPEL BEBAS, RAGAM BEDA)
+
+```{r}
+set.seed(109)
+n_A <- 25
+n_B <- 25
+
+mu_A <- c(78, 75)
+mu_B <- c(72, 70)
+
+# Matriks kovarians diasumsikan BERBEDA
+# Mungkin kelompok belajar mandiri nilainya lebih konsisten (ragam kecil)
+sigma_A <- matrix(c(120, 50, 50, 100), nrow=2)
+# Kelompok belajar proyek nilainya lebih bervariasi (ragam besar)
+sigma_B <- matrix(c(180, 70, 70, 160), nrow=2)
+
+kelompok_A_beda <- data.frame(mvrnorm(n_A, mu=mu_A, Sigma=sigma_A))
+names(kelompok_A_beda) <- c("Kalkulus", "Fisika")
+kelompok_B_beda <- data.frame(mvrnorm(n_B, mu=mu_B, Sigma=sigma_B))
+names(kelompok_B_beda) <- c("Kalkulus", "Fisika")
+```
+
+## 2. UJI T2 HOTELLING DUA SAMPEL (RAGAM BEDA)
+
+```{r}
+# H0: Tidak ada perbedaan rata-rata nilai antara kelompok A dan B
+result_heterogen <- hotelling.test(kelompok_A_beda, kelompok_B_beda, var.equal = FALSE)
+cat("\n--- Hasil Uji T2 Hotelling (Sampel Bebas, Ragam Berbeda) ---\n")
+result_heterogen
+```
+
+## Interpretasi
+
+Uji T2 Hotelling: Nilai p-value adalah 0.2468, yang juga lebih besar dari 0.05.
+
+Kesimpulan: Sama seperti analisis sebelumnya, bahkan ketika kita tidak mengasumsikan ragamnya sama, kita tetap sampai pada kesimpulan yang sama: tidak ada perbedaan yang signifikan secara statistik antara efektivitas kedua metode belajar tersebut.

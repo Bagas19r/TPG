@@ -1,0 +1,67 @@
+---
+title: "Latihan Mandiri TPG"
+author: "Muhammad Bagas Ramadhan G1401231109"
+date: "2025-11-12"
+output:
+  html_document:
+    theme: "darkly"
+    toc: true
+    toc_float: true
+---
+
+```{r}
+# Load library
+library(cluster)
+library(factoextra, lib.loc = "~/R/libs")
+
+# Persiapan Data
+# dataset iris (kolom 1-4)
+data <- iris[, 1:4]
+
+# men-scaling data agar variabel dengan rentang besar tidak mendominasi
+data_scaled <- scale(data)
+
+# Lihat 6 baris pertama data yang sudah di-scaling
+head(data_scaled)
+```
+
+# Gerombol Berhierarki (Hierarchical Clustering)
+
+```{r}
+# 1. Hitung matriks jarak (distance matrix)
+# Kita gunakan metode "euclidean"
+dist_matrix <- dist(data_scaled, method = "euclidean")
+
+# 2. Lakukan clustering hierarki
+# Kita gunakan metode "complete"
+hc <- hclust(dist_matrix, method = "complete")
+
+# 3. Visualisasi Hasil (Dendrogram)
+plot(hc, main = "Dendrogram Clustering Iris (Metode Complete)", 
+     xlab = "Observasi", sub = "", cex = 0.6)
+
+# 4. Potong dendrogram untuk mendapatkan 3 cluster
+# Kita potong jadi 3 cluster berdasarkan struktur dendrogramnya
+clusters_hc <- cutree(hc, k = 3)
+
+# Tambahkan kotak merah di sekitar 3 cluster pada dendrogram
+rect.hclust(hc, k = 3, border = 2:4) 
+
+# Lihat hasil pengelompokan
+clusters_hc
+
+# Bandingkan hasil cluster dengan spesies asli (untuk validasi)
+table(clusters_hc, iris$Species)
+```
+
+*Dendrogram:* Gambar pertama Anda (dendrogram) dengan jelas menunjukkan bagaimana data dikelompokkan. Garis horizontal pada Height sekitar 3.0 - 4.0 adalah tempat yang baik untuk "memotong" pohon menjadi 3 cluster, seperti yang ditunjukkan oleh kotak-kotak berwarna.
+
+*Tabel Hasil (Confusion Matrix):* Gambar kedua adalah bagian paling penting.
+
+Baris 1 (Cluster 1): Anda lihat 49 ada di bawah setosa. Ini artinya, Cluster 1 Anda berhasil menangkap 49 dari 50 bunga setosa (dan 1 versicolor). Hasil yang sangat bersih.
+
+Baris 2 (Cluster 2): Menangkap 21 versicolor dan 2 virginica.
+
+Baris 3 (Cluster 3): Menangkap 29 versicolor dan 48 virginica.
+
+*Kesimpulan:* Analisis hierarki Anda berhasil. Cluster 1 hampir sempurna memisahkan setosa. Cluster 2 dan 3 berhasil memisahkan sebagian besar versicolor dan virginica, meskipun ada sedikit tumpang tindih (misalnya, 29 versicolor masuk ke cluster 3), yang memang wajar terjadi dalam clustering.
